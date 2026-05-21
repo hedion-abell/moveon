@@ -13,14 +13,14 @@ const today = new Date().toISOString().slice(0, 10);
 function makeRecords() {
   const r = {};
   const seed = [
-    [1,{e1:45,e2:10,e3:15}],[2,{e1:38,e2:8,e3:12}],[3,{e1:60,e2:20,e3:25}],
-    [4,{e1:25,e2:5,e3:7}],[5,{e1:52,e2:14,e3:18}],[6,{e1:30,e2:6,e3:9}],
+    ["u1",{e1:45,e2:10,e3:15}],["u2",{e1:38,e2:8,e3:12}],["u3",{e1:60,e2:20,e3:25}],
+    ["u4",{e1:25,e2:5,e3:7}],["u5",{e1:52,e2:14,e3:18}],["u6",{e1:30,e2:6,e3:9}],
   ];
   seed.forEach(([uid, qty]) => {
     for (let i = 0; i < 5; i++) {
       const d = new Date(); d.setDate(d.getDate() - i);
       const ds = d.toISOString().slice(0, 10);
-      r[`u${uid}_${ds}`] = { checks:{e4:true}, quantities:Object.fromEntries(Object.entries(qty).map(([k,v])=>[k,v+i])), emotionBefore:"😊", emotionAfter:"😄", date:ds };
+      r[`${uid}_${ds}`] = { checks:{e4:true}, quantities:Object.fromEntries(Object.entries(qty).map(([k,v])=>[k,v+i])), emotionBefore:"😊", emotionAfter:"😄", date:ds };
     }
   });
   return r;
@@ -28,12 +28,12 @@ function makeRecords() {
 
 const INIT = {
   users: [
-    {id:"u1",name:"김민준",grade:1,classNum:1,gender:"남",role:"student",pw:"1234"},
-    {id:"u2",name:"이서연",grade:1,classNum:1,gender:"여",role:"student",pw:"1234"},
-    {id:"u3",name:"박지호",grade:2,classNum:2,gender:"남",role:"student",pw:"1234"},
-    {id:"u4",name:"최아린",grade:2,classNum:2,gender:"여",role:"student",pw:"1234"},
-    {id:"u5",name:"정하늘",grade:1,classNum:1,gender:"남",role:"student",pw:"1234"},
-    {id:"u6",name:"한소율",grade:1,classNum:2,gender:"여",role:"student",pw:"1234"},
+    {id:"u1",name:"김민준",grade:1,classNum:1,number:"1",gender:"남",role:"student",pw:"1234"},
+    {id:"u2",name:"이서연",grade:1,classNum:1,number:"2",gender:"여",role:"student",pw:"1234"},
+    {id:"u3",name:"박지호",grade:2,classNum:2,number:"1",gender:"남",role:"student",pw:"1234"},
+    {id:"u4",name:"최아린",grade:2,classNum:2,number:"2",gender:"여",role:"student",pw:"1234"},
+    {id:"u5",name:"정하늘",grade:1,classNum:1,number:"3",gender:"남",role:"student",pw:"1234"},
+    {id:"u6",name:"한소율",grade:1,classNum:2,number:"1",gender:"여",role:"student",pw:"1234"},
     {id:"u10",name:"김선생",grade:null,classNum:1,gender:null,role:"teacher",pw:"teacher1"},
     {id:"u11",name:"이선생",grade:null,classNum:2,gender:null,role:"teacher",pw:"teacher2"},
     {id:"u99",name:"관리자",grade:null,classNum:null,gender:null,role:"master",pw:"master"},
@@ -86,20 +86,40 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState("login");
   const [adminTab, setAdminTab] = useState("list");
-  const [loginId, setLoginId] = useState(""); const [loginPw, setLoginPw] = useState(""); const [loginErr, setLoginErr] = useState("");
-  const [checks, setChecks] = useState({}); const [quantities, setQuantities] = useState({});
-  const [emotionBefore, setEmotionBefore] = useState(null); const [emotionAfter, setEmotionAfter] = useState(null);
+
+  const [loginId, setLoginId] = useState("");
+  const [loginPw, setLoginPw] = useState("");
+  const [loginErr, setLoginErr] = useState("");
+
+  const [checks, setChecks] = useState({});
+  const [quantities, setQuantities] = useState({});
+  const [emotionBefore, setEmotionBefore] = useState(null);
+  const [emotionAfter, setEmotionAfter] = useState(null);
   const [inputCheer, setInputCheer] = useState({});
   const inputTimers = useRef({});
+
   const [editGoals, setEditGoals] = useState({});
   const [calMonth, setCalMonth] = useState(today.slice(0,7));
   const [calStudent, setCalStudent] = useState(null);
-  const [matrixEx, setMatrixEx] = useState(null); const [matrixMonth, setMatrixMonth] = useState(today.slice(0,7));
-  const [newExName, setNewExName] = useState(""); const [newExIcon, setNewExIcon] = useState("⭐"); const [newExType, setNewExType] = useState("check"); const [newExUnit, setNewExUnit] = useState("");
-  const [newStudent, setNewStudent] = useState({name:"",grade:"1",classNum:"1",gender:"남",pw:"1234"});
-  const [newGrade, setNewGrade] = useState(""); const [newClass, setNewClass] = useState("");
-  const [msgTarget, setMsgTarget] = useState(""); const [msgText, setMsgText] = useState("");
-  const [goalTarget, setGoalTarget] = useState(""); const [goalEx, setGoalEx] = useState(""); const [goalVal, setGoalVal] = useState("");
+  const [matrixEx, setMatrixEx] = useState(null);
+  const [matrixMonth, setMatrixMonth] = useState(today.slice(0,7));
+
+  const [newExName, setNewExName] = useState("");
+  const [newExIcon, setNewExIcon] = useState("⭐");
+  const [newExType, setNewExType] = useState("check");
+  const [newExUnit, setNewExUnit] = useState("");
+
+  const [newStudent, setNewStudent] = useState({name:"",grade:"1",classNum:"1",number:"",gender:"남",pw:"1234"});
+  const [xlsxFile, setXlsxFile] = useState(null);
+  const [xlsxFileName, setXlsxFileName] = useState("");
+
+  const [newGrade, setNewGrade] = useState("");
+  const [newClass, setNewClass] = useState("");
+  const [msgTarget, setMsgTarget] = useState("");
+  const [msgText, setMsgText] = useState("");
+  const [goalTarget, setGoalTarget] = useState("");
+  const [goalEx, setGoalEx] = useState("");
+  const [goalVal, setGoalVal] = useState("");
   const [goalPopup, setGoalPopup] = useState(false);
 
   function login() {
@@ -127,7 +147,7 @@ export default function App() {
     if (!val || Number(val)<=0) { setInputCheer(c=>({...c,[exId]:""})); return; }
     if (inputTimers.current[exId]) clearTimeout(inputTimers.current[exId]);
     inputTimers.current[exId] = setTimeout(() => {
-      setInputCheer(c=>({...c,[exId]:`${val}${ex.unit} 입력! 잘하고 있어요 💪`}));
+      setInputCheer(c=>({...c,[exId]:`${val}${ex.unit} 잘했어요! 💪`}));
     }, 600);
   }
 
@@ -135,6 +155,36 @@ export default function App() {
     const updated = {...data.goals};
     Object.entries(editGoals).forEach(([k,v]) => { if (v) updated[k] = {...updated[k], target:Number(v)}; });
     setData(d => ({...d, goals:updated})); setPage("home");
+  }
+
+  async function uploadExcel() {
+    if (!xlsxFile) return;
+    try {
+      const text = await xlsxFile.text();
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const newStudents = [];
+      lines.forEach((line, i) => {
+        const cols = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+        if (i === 0 && isNaN(Number(cols[0]))) return; // 헤더 스킵
+        const [grade, classNum, number, name, gender] = cols;
+        if (!name || !grade) return;
+        newStudents.push({
+          id: `u${Date.now()}${i}`,
+          grade: parseInt(grade), classNum: parseInt(classNum),
+          number: String(number||""), name: String(name),
+          gender: String(gender||"남"), role:"student", pw:"1234"
+        });
+      });
+      if (newStudents.length === 0) { alert("등록할 학생 데이터가 없어요.\nCSV 파일인지 확인해 주세요."); return; }
+      setData(d => ({...d, users:[
+        ...d.users.filter(u => u.role !== "student" || !newStudents.find(ns => ns.grade===u.grade && ns.classNum===u.classNum && ns.number===u.number)),
+        ...newStudents
+      ]}));
+      alert(`✅ ${newStudents.length}명이 등록되었어요!`);
+      setXlsxFile(null); setXlsxFileName("");
+    } catch(err) {
+      alert("파일 처리 오류: " + err.message);
+    }
   }
 
   const myStudents = user?.role==="master"
@@ -179,21 +229,21 @@ export default function App() {
           </div>
         )}
         <div style={{display:"flex",gap:6,marginBottom:14}}>
-          {["남","여"].map(s => (
+          {["남","여"].map(s=>(
             <button key={s} onClick={()=>setRSex(s)} style={{flex:1,padding:"8px",borderRadius:10,border:"none",fontWeight:700,fontSize:13,cursor:"pointer",
               background:rSex===s?(s==="남"?"#4db8e8":"#e85d8a"):"#f0f0f0",color:rSex===s?"#fff":"#888"}}>
               {s==="남"?"👦 남학생":"👧 여학생"}
             </button>
           ))}
         </div>
-        {data.exercises.filter(e=>e.type==="quantity").map(ex => {
+        {data.exercises.filter(e=>e.type==="quantity").map(ex=>{
           const ranking = getRanking(data.users, data.records, eff, ex.id, ex);
           return (
             <div key={ex.id} style={{marginBottom:14}}>
               <div style={{fontSize:13,fontWeight:700,color:"#555",marginBottom:6}}>{ex.icon} {ex.name} 순위</div>
               {ranking.filter(r=>r.val>0).length===0
                 ? <div style={{fontSize:12,color:"#ccc",paddingLeft:8}}>기록 없음</div>
-                : ranking.filter(r=>r.val>0).map(({s,val},i) => (
+                : ranking.filter(r=>r.val>0).map(({s,val},i)=>(
                   <div key={s.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:10,background:i===0?"#fffbe6":i===1?"#f8f8f8":i===2?"#fff4ee":"#fafafa",marginBottom:4}}>
                     <span style={{fontSize:13,fontWeight:700,width:28,color:i===0?OR:i===1?"#888":i===2?"#c87040":"#aaa"}}>{MEDALS[i]}</span>
                     <span style={{flex:1,fontSize:13,fontWeight:600}}>{s.name}</span>
@@ -293,7 +343,6 @@ export default function App() {
     );
   }
 
-  // ── MY GOAL
   if (page==="mygoal" && user?.role==="student") return (
     <div style={{minHeight:520,background:"linear-gradient(135deg,#fff9f0,#f0f0ff)",padding:"20px 16px"}}>
       <TopBar title="🎯 나의 목표"/>
@@ -318,7 +367,6 @@ export default function App() {
     </div>
   );
 
-  // ── MY CALENDAR
   if (page==="mycalendar" && user?.role==="student") {
     const {first,last}=calDays(calMonth);
     const days=[]; for(let i=0;i<first;i++)days.push(null); for(let d=1;d<=last;d++)days.push(d);
@@ -361,7 +409,6 @@ export default function App() {
     );
   }
 
-  // ── CHECK
   if (page==="check" && user?.role==="student") return (
     <div style={{minHeight:520,background:"linear-gradient(135deg,#fff9f0,#f0f0ff)",padding:"20px 16px"}}>
       <TopBar title="🏅 오늘 운동 체크"/>
@@ -396,7 +443,6 @@ export default function App() {
     </div>
   );
 
-  // ── EMOTION
   if (page==="emotion" && user?.role==="student") return (
     <div style={{minHeight:520,background:"linear-gradient(135deg,#fff9f0,#f0f0ff)",padding:"20px 16px"}}>
       <TopBar title="감정 기록 😊"/>
@@ -420,7 +466,6 @@ export default function App() {
     </div>
   );
 
-  // ── DONE
   if (page==="done" && user?.role==="student") {
     const rec=data.records[gk(user.id,today)]||{checks,quantities,emotionBefore,emotionAfter};
     const cC=rec.checks||checks, cQ=rec.quantities||quantities, cEB=rec.emotionBefore||emotionBefore, cEA=rec.emotionAfter||emotionAfter;
@@ -487,7 +532,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* 현황 */}
         {adminTab==="list"&&(
           <div>
             <div style={{marginBottom:6,fontSize:12,color:"#aaa"}}>📅 {today} 기준</div>
@@ -502,10 +546,10 @@ export default function App() {
                   <th style={{padding:"8px 5px",color:P,textAlign:"center"}}>후</th>
                 </tr></thead>
                 <tbody>
-                  {myStudents.map((s,idx)=>{
+                  {myStudents.slice().sort((a,b)=>a.classNum-b.classNum||(Number(a.number||99)-Number(b.number||99))).map((s,idx)=>{
                     const rec=getRecord(s.id,today);
                     return <tr key={s.id} style={{borderBottom:"1px solid #f0e8d8"}}>
-                      <td style={{padding:"8px 6px",textAlign:"center",color:"#aaa",fontWeight:600}}>{idx+1}</td>
+                      <td style={{padding:"8px 6px",textAlign:"center",color:"#aaa",fontWeight:600}}>{s.number||idx+1}</td>
                       <td style={{padding:"8px 8px",fontWeight:600}}>
                         <span style={{cursor:"pointer",color:P,textDecoration:"underline"}} onClick={()=>{setCalStudent(s);setAdminTab("calendar");}}>{s.name}</span>
                       </td>
@@ -523,11 +567,10 @@ export default function App() {
           </div>
         )}
 
-        {/* 명렬표 */}
         {adminTab==="matrix"&&(()=>{
           const selEx=matrixEx?data.exercises.find(e=>e.id===matrixEx):data.exercises[0];
           const days=daysInMonth(matrixMonth);
-          const sel=myStudents.slice().sort((a,b)=>a.classNum-b.classNum||a.name.localeCompare(b.name,"ko"));
+          const sel=myStudents.slice().sort((a,b)=>a.classNum-b.classNum||(Number(a.number||99)-Number(b.number||99)));
           return <div>
             <div style={{display:"flex",gap:8,marginBottom:12}}>
               <select value={selEx?.id||""} onChange={e=>setMatrixEx(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:13}}>
@@ -535,15 +578,15 @@ export default function App() {
               </select>
               <input type="month" value={matrixMonth} onChange={e=>setMatrixMonth(e.target.value)} style={{padding:"7px 10px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:13}}/>
             </div>
-            <div style={{overflowX:"auto"}}>
-              <table style={{borderCollapse:"collapse",fontSize:10,minWidth:500}}>
+            <div style={{overflowX:"auto",width:"100%"}}>
+              <table style={{borderCollapse:"collapse",fontSize:10,width:"100%",tableLayout:"fixed"}}>
                 <thead><tr style={{background:LP}}>
-                  <th style={{padding:"7px 6px",color:P,textAlign:"center"}}>번호</th>
-                  <th style={{padding:"7px 8px",textAlign:"left",color:P,position:"sticky",left:0,background:LP,zIndex:1}}>이름</th>
-                  <th style={{padding:"7px 5px",color:P,textAlign:"center"}}>성별</th>
-                  {days.map(d=><th key={d} style={{padding:"7px 3px",color:P,minWidth:22,textAlign:"center"}}>{parseInt(d)}</th>)}
-                  <th style={{padding:"7px 5px",color:P}}>합계</th>
-                  <th style={{padding:"7px 5px",color:P}}>추세</th>
+                  <th style={{padding:"7px 6px",color:P,textAlign:"center",width:32}}>번호</th>
+                  <th style={{padding:"7px 8px",textAlign:"left",color:P,position:"sticky",left:0,background:LP,zIndex:1,width:60}}>이름</th>
+                  <th style={{padding:"7px 5px",color:P,textAlign:"center",width:28}}>성별</th>
+                  {days.map(d=><th key={d} style={{padding:"7px 2px",color:P,textAlign:"center"}}>{parseInt(d)}</th>)}
+                  <th style={{padding:"7px 5px",color:P,textAlign:"center",width:36}}>합계</th>
+                  <th style={{padding:"7px 5px",color:P,textAlign:"center",width:30}}>추세</th>
                 </tr></thead>
                 <tbody>
                   {sel.map((s,idx)=>{
@@ -555,7 +598,7 @@ export default function App() {
                     });
                     const tr=trendFn(data.records,s.id,selEx?.id,selEx||{type:"check"});
                     return <tr key={s.id} style={{background:idx%2===0?"#fff":"#fdf9ff",borderBottom:"1px solid #f0e8d8"}}>
-                      <td style={{padding:"7px 6px",textAlign:"center",color:"#aaa",fontWeight:600}}>{idx+1}</td>
+                      <td style={{padding:"7px 6px",textAlign:"center",color:"#aaa",fontWeight:600}}>{s.number||idx+1}</td>
                       <td style={{padding:"7px 8px",fontWeight:600,whiteSpace:"nowrap",position:"sticky",left:0,background:idx%2===0?"#fff":"#fdf9ff",zIndex:1}}>{s.name}</td>
                       <td style={{padding:"7px 5px",textAlign:"center"}}>{s.gender}</td>
                       {cells.map((v,i)=><td key={i} style={{padding:"5px 3px",textAlign:"center",color:v!==null?P:"#e0e0e0",fontWeight:v!==null?600:400}}>{v!==null?v:"·"}</td>)}
@@ -569,13 +612,12 @@ export default function App() {
           </div>;
         })()}
 
-        {/* 달력 */}
         {adminTab==="calendar"&&(
           <div>
             <div style={{display:"flex",gap:8,marginBottom:12}}>
               <select value={calStudent?.id||""} onChange={e=>setCalStudent(myStudents.find(s=>s.id===e.target.value)||null)} style={{flex:1,padding:"7px 10px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:13}}>
                 <option value="">학생 선택</option>
-                {myStudents.map(s=><option key={s.id} value={s.id}>{s.name} ({s.grade}-{s.classNum})</option>)}
+                {myStudents.map(s=><option key={s.id} value={s.id}>{s.number?s.number+"번 ":""}{s.name} ({s.grade}-{s.classNum})</option>)}
               </select>
               <input type="month" value={calMonth} onChange={e=>setCalMonth(e.target.value)} style={{padding:"7px 10px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:13}}/>
             </div>
@@ -583,9 +625,8 @@ export default function App() {
               const {first,last}=calDays(calMonth);
               const days=[]; for(let i=0;i<first;i++)days.push(null); for(let d=1;d<=last;d++)days.push(d);
               const recs=Object.entries(data.records).filter(([k])=>k.startsWith(`${calStudent.id}_${calMonth}`)).map(([,v])=>v).sort((a,b)=>b.date.localeCompare(a.date));
-              const stIdx=myStudents.findIndex(s=>s.id===calStudent.id);
               return <div style={CARD}>
-                <h3 style={{fontSize:13,fontWeight:700,color:P,marginBottom:8}}>{stIdx+1}번 {calStudent.name} · {calMonth}</h3>
+                <h3 style={{fontSize:13,fontWeight:700,color:P,marginBottom:8}}>{calStudent.number?calStudent.number+"번 ":""}{calStudent.name} · {calMonth}</h3>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,textAlign:"center",marginBottom:10}}>
                   {["일","월","화","수","목","금","토"].map(d=><div key={d} style={{fontSize:9,color:"#aaa"}}>{d}</div>)}
                   {days.map((d,i)=>{if(!d)return<div key={`e${i}`}/>;const ds=`${calMonth}-${String(d).padStart(2,"0")}`,rec=getRecord(calStudent.id,ds),isT=ds===today;return(
@@ -612,7 +653,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 순위 */}
         {adminTab==="ranking"&&(
           <div>
             {user.role==="master"
@@ -622,13 +662,12 @@ export default function App() {
           </div>
         )}
 
-        {/* 메시지 */}
         {adminTab==="msg"&&user.role==="teacher"&&(
           <div>
             <div style={CARD}>
               <h3 style={{fontSize:13,fontWeight:700,color:P,marginBottom:10}}>💌 학생에게 메시지</h3>
               <select value={msgTarget} onChange={e=>setMsgTarget(e.target.value)} style={{width:"100%",padding:"8px 10px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:13,marginBottom:8,boxSizing:"border-box"}}>
-                <option value="">학생 선택</option>{myStudents.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                <option value="">학생 선택</option>{myStudents.map(s=><option key={s.id} value={s.id}>{s.number?s.number+"번 ":""}{s.name}</option>)}
               </select>
               <textarea value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder="전하고 싶은 말을 써주세요 ✏️" rows={3}
                 style={{width:"100%",padding:"9px 12px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:13,resize:"none",boxSizing:"border-box",fontFamily:"inherit",marginBottom:8}}/>
@@ -646,7 +685,7 @@ export default function App() {
               <h3 style={{fontSize:13,fontWeight:700,color:P,marginBottom:10}}>🎯 목표 설정</h3>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:7}}>
                 <select value={goalTarget} onChange={e=>setGoalTarget(e.target.value)} style={{padding:"7px 8px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:12}}>
-                  <option value="">학생 선택</option>{myStudents.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                  <option value="">학생 선택</option>{myStudents.map(s=><option key={s.id} value={s.id}>{s.number?s.number+"번 ":""}{s.name}</option>)}
                 </select>
                 <select value={goalEx} onChange={e=>setGoalEx(e.target.value)} style={{padding:"7px 8px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:12}}>
                   <option value="">운동 선택</option>{data.exercises.filter(e=>e.type==="quantity").map(ex=><option key={ex.id} value={ex.id}>{ex.icon} {ex.name}</option>)}
@@ -661,7 +700,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 관리 */}
         {adminTab==="manage"&&user.role==="master"&&(
           <div>
             <div style={CARD}>
@@ -685,6 +723,7 @@ export default function App() {
                 ))}
               </div>
             </div>
+
             <div style={CARD}>
               <h3 style={{fontSize:13,fontWeight:700,color:P,marginBottom:8}}>🏅 운동 종목</h3>
               {data.exercises.map(ex=>(
@@ -707,30 +746,60 @@ export default function App() {
                   style={{padding:"6px",borderRadius:8,background:P,color:"#fff",border:"none",cursor:"pointer",fontWeight:700}}>추가</button>
               </div>
             </div>
+
             <div style={CARD}>
               <h3 style={{fontSize:13,fontWeight:700,color:P,marginBottom:8}}>👦👧 학생 관리</h3>
-              <div style={{maxHeight:160,overflowY:"auto",marginBottom:8}}>
-                {data.users.filter(u=>u.role==="student").slice().sort((a,b)=>a.classNum-b.classNum||a.name.localeCompare(b.name,"ko")).map(s=>(
+
+              {/* 엑셀 업로드 */}
+              <div style={{background:"#f8f4ff",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:P,marginBottom:4}}>📂 엑셀 파일로 일괄 등록</div>
+                <div style={{fontSize:11,color:"#aaa",marginBottom:8}}>열 순서: <b style={{color:"#666"}}>학년 · 반 · 번호 · 이름 · 성별</b> (CSV 파일)</div>
+                <div style={{fontSize:11,color:"#f0a030",marginBottom:8}}>💡 엑셀에서 "다른 이름으로 저장" → CSV 형식으로 저장 후 업로드하세요</div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <label style={{flex:1,padding:"8px 12px",borderRadius:8,border:"1.5px dashed #c0b0f0",fontSize:12,cursor:"pointer",background:"#fff",
+                    textAlign:"center",color:xlsxFileName?"#6c3fd6":"#aaa",fontWeight:xlsxFileName?700:400,display:"block",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
+                    {xlsxFileName||"파일 선택 (xlsx / csv)"}
+                    <input type="file" accept=".csv,.txt" style={{display:"none"}} onChange={e=>{
+                      const f=e.target.files[0]; if(!f)return;
+                      setXlsxFile(f); setXlsxFileName(f.name);
+                    }}/>
+                  </label>
+                  <button disabled={!xlsxFile} onClick={uploadExcel}
+                    style={{padding:"8px 16px",borderRadius:8,background:xlsxFile?P:"#ccc",color:"#fff",border:"none",cursor:xlsxFile?"pointer":"not-allowed",fontWeight:700,fontSize:12,whiteSpace:"nowrap"}}>
+                    업로드
+                  </button>
+                </div>
+              </div>
+
+              {/* 목록 */}
+              <div style={{maxHeight:200,overflowY:"auto",marginBottom:8}}>
+                {data.users.filter(u=>u.role==="student").slice().sort((a,b)=>a.classNum-b.classNum||(Number(a.number||99)-Number(b.number||99))).map(s=>(
                   <div key={s.id} style={{display:"flex",alignItems:"center",gap:7,background:"#f8f4ff",borderRadius:10,padding:"6px 10px",marginBottom:4,fontSize:12}}>
+                    <span style={{color:"#aaa",fontSize:11,minWidth:18,textAlign:"right"}}>{s.number||"-"}</span>
                     <span style={{flex:1,fontWeight:600}}>{s.name}</span>
                     <span style={{fontSize:10,color:"#aaa"}}>{s.grade}학년 {s.classNum}반 ({s.gender})</span>
                     <button onClick={()=>setData(d=>({...d,users:d.users.filter(u=>u.id!==s.id)}))} style={{background:"none",border:"none",cursor:"pointer",color:"#e05555",fontSize:12,padding:0}}>✕</button>
                   </div>
                 ))}
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:5,marginBottom:5}}>
-                <input value={newStudent.name} onChange={e=>setNewStudent(s=>({...s,name:e.target.value}))} placeholder="이름" style={{padding:"6px 8px",borderRadius:8,border:"1.5px solid #e0d8f8",fontSize:13}}/>
+
+              {/* 수동 입력: 학년/반/번호/이름/성별 */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 56px 2fr 1fr",gap:5,marginBottom:5}}>
                 <select value={newStudent.grade} onChange={e=>setNewStudent(s=>({...s,grade:e.target.value}))} style={{padding:"6px",borderRadius:8,border:"1.5px solid #e0d8f8",fontSize:12}}>
                   {data.grades.map(g=><option key={g} value={g}>{g}학년</option>)}
                 </select>
                 <select value={newStudent.classNum} onChange={e=>setNewStudent(s=>({...s,classNum:e.target.value}))} style={{padding:"6px",borderRadius:8,border:"1.5px solid #e0d8f8",fontSize:12}}>
                   {data.classes.map(n=><option key={n} value={n}>{n}반</option>)}
                 </select>
+                <input type="number" min="1" value={newStudent.number} onChange={e=>setNewStudent(s=>({...s,number:e.target.value}))} placeholder="번호"
+                  style={{padding:"6px 4px",borderRadius:8,border:"1.5px solid #e0d8f8",fontSize:12,textAlign:"center"}}/>
+                <input value={newStudent.name} onChange={e=>setNewStudent(s=>({...s,name:e.target.value}))} placeholder="이름"
+                  style={{padding:"6px 8px",borderRadius:8,border:"1.5px solid #e0d8f8",fontSize:13}}/>
                 <select value={newStudent.gender} onChange={e=>setNewStudent(s=>({...s,gender:e.target.value}))} style={{padding:"6px",borderRadius:8,border:"1.5px solid #e0d8f8",fontSize:12}}>
                   <option value="남">남</option><option value="여">여</option>
                 </select>
               </div>
-              <button onClick={()=>{if(!newStudent.name.trim())return;setData(d=>({...d,users:[...d.users,{...newStudent,id:`u${Date.now()}`,grade:parseInt(newStudent.grade),classNum:parseInt(newStudent.classNum),role:"student"}]}));setNewStudent({name:"",grade:"1",classNum:"1",gender:"남",pw:"1234"});}}
+              <button onClick={()=>{if(!newStudent.name.trim())return;setData(d=>({...d,users:[...d.users,{...newStudent,id:`u${Date.now()}`,grade:parseInt(newStudent.grade),classNum:parseInt(newStudent.classNum),role:"student"}]}));setNewStudent({name:"",grade:"1",classNum:"1",number:"",gender:"남",pw:"1234"});}}
                 style={{width:"100%",padding:9,borderRadius:10,background:P,color:"#fff",fontWeight:700,border:"none",cursor:"pointer",fontSize:13}}>+ 학생 추가</button>
             </div>
           </div>
