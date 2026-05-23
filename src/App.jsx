@@ -1,4 +1,31 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC5SbZWFsHTi71_PBIvfPKK1j1X9qr8fLw",
+  authDomain: "moveon-4ddfa.firebaseapp.com",
+  projectId: "moveon-4ddfa",
+  storageBucket: "moveon-4ddfa.firebasestorage.app",
+  messagingSenderId: "468856039964",
+  appId: "1:468856039964:web:6c107e352213d9265bcdd9"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
+async function fsGet(col, id) {
+  const snap = await getDoc(doc(db, col, id));
+  return snap.exists() ? snap.data() : null;
+}
+async function fsSet(col, id, data) {
+  await setDoc(doc(db, col, id), data, { merge: true });
+}
+async function fsGetAll(col) {
+  const snap = await getDocs(collection(db, col));
+  const result = {};
+  snap.forEach(d => { result[d.id] = d.data(); });
+  return result;
+}
 
 const WP = [
   [
@@ -30,7 +57,6 @@ const WP = [
     {id:"p5",ic:"\uD83D\uDE4F",title:"감사한 일 찾기",sub:"오늘 좋은 일 하나 떠올려봐요",bg:"#d4f5e2",bd:"#7dd9a8"},
   ],
 ];
-
 function getPromises() {
   return WP[Math.floor(new Date().getDate() / 7) % WP.length];
 }
@@ -45,40 +71,20 @@ const P="#7c5cd6",LP="#f0e8ff",OR="#f0a030",LO="#fff8e8";
 const CARD={background:"#fff",borderRadius:16,padding:"14px 16px",marginBottom:12,border:"1.5px solid #f0e8d8"};
 const today=new Date().toISOString().slice(0,10);
 
-function makeRecords(){
-  const r={};
-  const seed=[["u1",{e1:45,e2:10,e3:15}],["u2",{e1:38,e2:8,e3:12}],["u3",{e1:60,e2:20,e3:25}],
-    ["u4",{e1:25,e2:5,e3:7}],["u5",{e1:52,e2:14,e3:18}],["u6",{e1:30,e2:6,e3:9}]];
-  seed.forEach(([uid,qty])=>{
-    for(let i=0;i<5;i++){
-      const d=new Date(); d.setDate(d.getDate()-i);
-      const ds=d.toISOString().slice(0,10);
-      r[`${uid}_${ds}`]={checks:{e4:true},quantities:Object.fromEntries(Object.entries(qty).map(([k,v])=>[k,v+i])),emotionBefore:"😊",emotionAfter:"😄",date:ds};
-    }
-  });
-  return r;
-}
-
-const INIT={
-  users:[
+const DEFAULT_DATA = {
+  users: [
     {id:"u1",name:"김민준",grade:1,classNum:1,number:"1",gender:"남",role:"student",pw:"1234"},
     {id:"u2",name:"이서연",grade:1,classNum:1,number:"2",gender:"여",role:"student",pw:"1234"},
-    {id:"u3",name:"박지호",grade:2,classNum:2,number:"1",gender:"남",role:"student",pw:"1234"},
-    {id:"u4",name:"최아린",grade:2,classNum:2,number:"2",gender:"여",role:"student",pw:"1234"},
-    {id:"u5",name:"정하늘",grade:1,classNum:1,number:"3",gender:"남",role:"student",pw:"1234"},
-    {id:"u6",name:"한소율",grade:1,classNum:2,number:"1",gender:"여",role:"student",pw:"1234"},
     {id:"u10",name:"김선생",grade:null,classNum:1,gender:null,role:"teacher",pw:"teacher1"},
-    {id:"u11",name:"이선생",grade:null,classNum:2,gender:null,role:"teacher",pw:"teacher2"},
     {id:"u99",name:"관리자",grade:null,classNum:null,gender:null,role:"master",pw:"master"},
   ],
-  exercises:[
+  exercises: [
     {id:"e1",name:"줄넘기",icon:"🪢",type:"quantity",unit:"회"},
     {id:"e2",name:"달리기",icon:"🏃",type:"quantity",unit:"분"},
     {id:"e3",name:"걷기",icon:"🚶",type:"quantity",unit:"분"},
     {id:"e4",name:"스트레칭",icon:"🤸",type:"check",unit:""},
   ],
-  grades:[1,2],classes:[1,2],
-  records:makeRecords(),goals:{},messages:{},
+  grades:[1,2], classes:[1,2],
 };
 
 function gk(uid,date){return `${uid}_${date}`;}
@@ -115,7 +121,8 @@ function getRanking(users,records,filterFn,exId,ex){
 }
 
 export default function App(){
-  const [data,setData]=useState(INIT);
+  const [data,setData]=useState({...DEFAULT_DATA,records:{},goals:{},messages:{}});
+  const [loading,setLoading]=useState(true);
   const [user,setUser]=useState(null);
   const [page,setPage]=useState("login");
   const [adminTab,setAdminTab]=useState("list");
@@ -151,25 +158,50 @@ export default function App(){
   const [promiseChecks,setPromiseChecks]=useState({});
   const [promiseSaved,setPromiseSaved]=useState({});
 
-  function login(){
-    const u=data.users.find(x=>x.name===loginId&&x.pw===loginPw);
-    if(!u){setLoginErr("아이디나 비밀번호가 틀렸어요!");return;}
-    setUser(u);setLoginErr("");
-    if(u.role==="student"){
-      const rec=data.records[gk(u.id,today)];
-      if(rec){setChecks(rec.checks||{});setQuantities(rec.quantities||{});setEmotionBefore(rec.emotionBefore||null);setEmotionAfter(rec.emotionAfter||null);}
-      else{setChecks({});setQuantities({});setEmotionBefore(null);setEmotionAfter(null);}
-      setPage("home");
-    }else{setPage("admin");setAdminTab("list");}
-  }
-  function logout(){setUser(null);setPage("login");setLoginId("");setLoginPw("");setLoginErr("");setInputCheer({});}
-  function goHome(){setPage("home");}
+  useEffect(()=>{
+    async function loadData(){
+      setLoading(true);
+      try{
+        const [users,exercises,records,goals,messages,meta]=await Promise.all([
+          fsGetAll("users"),fsGetAll("exercises"),fsGetAll("records"),
+          fsGetAll("goals"),fsGetAll("messages"),fsGet("meta","config")
+        ]);
+        const userList=Object.keys(users).length>0?Object.values(users):DEFAULT_DATA.users;
+        const exList=Object.keys(exercises).length>0?Object.values(exercises):DEFAULT_DATA.exercises;
+        if(Object.keys(users).length===0){
+          for(const u of DEFAULT_DATA.users)await fsSet("users",u.id,u);
+          for(const e of DEFAULT_DATA.exercises)await fsSet("exercises",e.id,e);
+          await fsSet("meta","config",{grades:DEFAULT_DATA.grades,classes:DEFAULT_DATA.classes});
+        }
+        // Load promise saved data
+        const pSnap = await fsGetAll("promiseSaved");
+        const pData = {};
+        Object.entries(pSnap).forEach(([k,v])=>{ pData[k]=v; });
 
-  function saveRecord(){
+        setData({users:userList,exercises:exList,
+          grades:meta?.grades||DEFAULT_DATA.grades,
+          classes:meta?.classes||DEFAULT_DATA.classes,
+          records,goals,messages});
+        setPromiseSaved(pData);
+      }catch(e){console.error(e);}
+      setLoading(false);
+    }
+    loadData();
+  },[]);
+
+  async function saveRecord(){
     const key=gk(user.id,today);
     const rec={checks,quantities,emotionBefore,emotionAfter,date:today};
     setData(d=>({...d,records:{...d.records,[key]:rec}}));
+    await fsSet("records",key,rec);
     setPage("done");
+  }
+
+  async function savePromise(checked){
+    const key=`${user.id}_${today}`;
+    const val={...checked,_date:today,_uid:user.id};
+    setPromiseSaved(s=>({...s,[today]:checked}));
+    await fsSet("promiseSaved",key,val);
   }
 
   function handleQuantityChange(exId,val,ex){
@@ -181,10 +213,65 @@ export default function App(){
     },600);
   }
 
-  function saveMyGoals(){
+  async function saveMyGoals(){
     const updated={...data.goals};
-    Object.entries(editGoals).forEach(([k,v])=>{if(v)updated[k]={...updated[k],target:Number(v)};});
+    for(const [k,v] of Object.entries(editGoals)){
+      if(v){updated[k]={...updated[k],target:Number(v)};await fsSet("goals",k,updated[k]);}
+    }
     setData(d=>({...d,goals:updated}));setPage("home");
+  }
+
+  async function addStudent(){
+    if(!newStudent.name.trim())return;
+    const id=`u${Date.now()}`;
+    const s={...newStudent,id,grade:parseInt(newStudent.grade),classNum:parseInt(newStudent.classNum),role:"student"};
+    setData(d=>({...d,users:[...d.users,s]}));
+    await fsSet("users",id,s);
+    setNewStudent({name:"",grade:"1",classNum:"1",number:"",gender:"남",pw:"1234"});
+  }
+
+  async function removeStudent(id){
+    setData(d=>({...d,users:d.users.filter(u=>u.id!==id)}));
+    await deleteDoc(doc(db,"users",id));
+  }
+
+  async function addExercise(){
+    if(!newExName.trim())return;
+    const id=`e${Date.now()}`;
+    const ex={id,name:newExName.trim(),icon:newExIcon,type:newExType,unit:newExUnit};
+    setData(d=>({...d,exercises:[...d.exercises,ex]}));
+    await fsSet("exercises",id,ex);
+    setNewExName("");setNewExIcon("⭐");setNewExUnit("");
+  }
+
+  async function removeExercise(id){
+    setData(d=>({...d,exercises:d.exercises.filter(e=>e.id!==id)}));
+    await deleteDoc(doc(db,"exercises",id));
+  }
+
+  async function sendMessage(){
+    if(!msgTarget||!msgText.trim())return;
+    const msg={text:msgText.trim(),from:user.name,date:today};
+    setData(d=>({...d,messages:{...d.messages,[msgTarget]:msg}}));
+    await fsSet("messages",msgTarget,msg);
+    setMsgText("");setMsgTarget("");
+  }
+
+  async function setGoalFn(){
+    if(!goalTarget||!goalEx||!goalVal)return;
+    const ex=data.exercises.find(e=>e.id===goalEx);
+    const k=goalKey(goalTarget,goalEx);
+    const g={target:Number(goalVal),unit:ex.unit,exName:ex.name};
+    setData(d=>({...d,goals:{...d.goals,[k]:g}}));
+    await fsSet("goals",k,g);
+    setGoalVal("");setGoalPopup(true);setTimeout(()=>setGoalPopup(false),2000);
+  }
+
+  async function updateMeta(key,value){
+    setData(d=>({...d,[key]:value}));
+    const newGrades=key==="grades"?value:data.grades;
+    const newClasses=key==="classes"?value:data.classes;
+    await fsSet("meta","config",{grades:newGrades,classes:newClasses});
   }
 
   async function uploadExcel(){
@@ -198,14 +285,33 @@ export default function App(){
         if(i===0&&isNaN(Number(cols[0])))return;
         const[grade,classNum,number,name,gender]=cols;
         if(!name||!grade)return;
-        ns.push({id:`u${Date.now()}${i}`,grade:parseInt(grade),classNum:parseInt(classNum),number:String(number||""),name:String(name),gender:String(gender||"남"),role:"student",pw:"1234"});
+        ns.push({id:`u${Date.now()}${i}`,grade:parseInt(grade),classNum:parseInt(classNum),
+          number:String(number||""),name:String(name),gender:String(gender||"남"),role:"student",pw:"1234"});
       });
       if(ns.length===0){alert("등록할 데이터가 없어요.");return;}
-      setData(d=>({...d,users:[...d.users.filter(u=>u.role!=="student"||!ns.find(n=>n.grade===u.grade&&n.classNum===u.classNum&&n.number===u.number)),...ns]}));
+      for(const s of ns)await fsSet("users",s.id,s);
+      setData(d=>({...d,users:[
+        ...d.users.filter(u=>u.role!=="student"||!ns.find(n=>n.grade===u.grade&&n.classNum===u.classNum&&n.number===u.number)),
+        ...ns
+      ]}));
       alert(`✅ ${ns.length}명 등록 완료!`);
       setXlsxFile(null);setXlsxFileName("");
     }catch(err){alert("오류: "+err.message);}
   }
+
+  function login(){
+    const u=data.users.find(x=>x.name===loginId&&x.pw===loginPw);
+    if(!u){setLoginErr("아이디나 비밀번호가 틀렸어요!");return;}
+    setUser(u);setLoginErr("");
+    if(u.role==="student"){
+      const rec=data.records[gk(u.id,today)];
+      if(rec){setChecks(rec.checks||{});setQuantities(rec.quantities||{});setEmotionBefore(rec.emotionBefore||null);setEmotionAfter(rec.emotionAfter||null);}
+      else{setChecks({});setQuantities({});setEmotionBefore(null);setEmotionAfter(null);}
+      setPage("home");
+    }else{setPage("admin");setAdminTab("list");}
+  }
+  function logout(){setUser(null);setPage("login");setLoginId("");setLoginPw("");setLoginErr("");setInputCheer({});}
+  function goHome(){setPage("home");}
 
   const myStudents=user?.role==="master"
     ?data.users.filter(u=>u.role==="student")
@@ -277,7 +383,13 @@ export default function App(){
     );
   }
 
-  // LOGIN
+  if(loading) return(
+    <div style={{minHeight:520,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#fff9f0,#f0f0ff)"}}>
+      <div style={{fontSize:48,marginBottom:16}}>🏃</div>
+      <div style={{fontSize:16,color:P,fontWeight:700}}>데이터 불러오는 중...</div>
+    </div>
+  );
+
   if(page==="login") return(
     <div style={{minHeight:520,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#fff9f0,#f0f0ff)",padding:32}}>
       <div style={{fontSize:64,marginBottom:6}}>🏃‍♂️</div>
@@ -301,14 +413,10 @@ export default function App(){
         </div>
         {loginErr&&<p style={{color:"#e05555",fontSize:12,marginBottom:8}}>{loginErr}</p>}
         <button onClick={login} style={{width:"100%",padding:11,borderRadius:12,background:P,color:"#fff",fontSize:15,fontWeight:700,border:"none",cursor:"pointer"}}>로그인 🚀</button>
-        <div style={{marginTop:12,padding:10,background:LP,borderRadius:10,fontSize:11,color:"#888"}}>
-          <b style={{color:P}}>테스트 계정</b><br/>학생: 김민준 / 1234<br/>교사: 김선생 / teacher1<br/>관리자: 관리자 / master
-        </div>
       </div>
     </div>
   );
 
-  // STUDENT HOME
   if(page==="home"&&user?.role==="student"){
     const myMsg=data.messages[user.id];
     const todayRec=data.records[gk(user.id,today)];
@@ -318,23 +426,20 @@ export default function App(){
     const checkedCount=Object.values(promiseChecks).filter(Boolean).length;
     const {first,last}=calDays(today.slice(0,7));
     const cdList=[];for(let i=0;i<first;i++)cdList.push(null);for(let d=1;d<=last;d++)cdList.push(d);
-
     function getMark(ds){
       const sv=promiseSaved[ds];if(!sv)return null;
-      const done=Object.values(sv).filter(Boolean).length;
-      const tot=Object.keys(sv).length;
+      const done=Object.values(sv).filter(v=>v===true||v===1).length;
+      const tot=promises.length;
       if(done>=Math.ceil(tot*0.75))return "circle";
       if(done>=1)return "triangle";
       return null;
     }
-
     return(
       <div style={{minHeight:520,background:"linear-gradient(135deg,#fff9f0,#f0f0ff)",padding:"20px 16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
           <span style={{fontSize:16,fontWeight:700,color:P}}>👋 {user.name}</span>
           <button onClick={logout} style={{fontSize:12,color:"#aaa",background:"none",border:"1px solid #ddd",borderRadius:8,padding:"4px 10px",cursor:"pointer"}}>로그아웃</button>
         </div>
-
         {myMsg&&(
           <div style={{background:"linear-gradient(90deg,#f0e8ff,#fff8f0)",border:"1.5px solid #e0d0ff",borderRadius:14,padding:"10px 14px",marginBottom:12,display:"flex",gap:8}}>
             <span style={{fontSize:20}}>💌</span>
@@ -342,8 +447,6 @@ export default function App(){
             <div style={{fontSize:13,color:"#444",lineHeight:1.6}}>{myMsg.text}</div></div>
           </div>
         )}
-
-        {/* 건강 약속 */}
         <div style={{background:"linear-gradient(135deg,#e8f8ff,#f0fff4)",border:"1.5px solid #a8dfc8",borderRadius:16,padding:"14px 16px",marginBottom:14}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
             <div>
@@ -351,17 +454,16 @@ export default function App(){
               <div style={{fontSize:11,color:"#5a9a70"}}>하나씩 지킬 때마다 스티커 ⭐ 1개!</div>
             </div>
             <div style={{background:"#fff",borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:800,color:"#2a7a50",border:"2px solid #7dd9a8",whiteSpace:"nowrap"}}>
-              {todayPromise?Object.values(todayPromise).filter(Boolean).length:checkedCount} / {promises.length}
-              {todayPromise&&Object.values(todayPromise).filter(Boolean).length===promises.length?" 완료":""}
+              {todayPromise?Object.values(todayPromise).filter(v=>v===true||v===1).length:checkedCount} / {promises.length}
+              {todayPromise&&Object.values(todayPromise).filter(v=>v===true||v===1).length===promises.length?" 완료":""}
             </div>
           </div>
-
           {!todayPromise?(
             <>
               {promises.map(p=>(
                 <div key={p.id} onClick={()=>setPromiseChecks(c=>({...c,[p.id]:!c[p.id]}))}
                   style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:14,marginBottom:8,cursor:"pointer",
-                    background:promiseChecks[p.id]?p.bg:"#fff",border:`2px solid ${promiseChecks[p.id]?p.bd:"#eee"}`,transition:"all 0.15s"}}>
+                    background:promiseChecks[p.id]?p.bg:"#fff",border:`2px solid ${promiseChecks[p.id]?p.bd:"#eee"}`}}>
                   <span style={{fontSize:26,flexShrink:0}}>{p.ic}</span>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13,fontWeight:700,color:"#333",textDecoration:promiseChecks[p.id]?"line-through":"none"}}>{p.title}</div>
@@ -373,7 +475,7 @@ export default function App(){
                 </div>
               ))}
               {checkedCount>0&&(
-                <button onClick={()=>{setPromiseSaved(s=>({...s,[today]:{...promiseChecks}}));setPromiseChecks({});}}
+                <button onClick={()=>{savePromise({...promiseChecks});setPromiseChecks({});}}
                   style={{width:"100%",padding:"11px",borderRadius:12,background:"#2a7a50",color:"#fff",fontSize:13,fontWeight:700,border:"none",cursor:"pointer",marginTop:4}}>
                   완료! ({checkedCount}개 달성 — ⭐ {checkedCount}개 획득!)
                 </button>
@@ -384,14 +486,14 @@ export default function App(){
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
                 {promises.map(p=>(
                   <div key={p.id} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 10px",borderRadius:10,
-                    background:todayPromise[p.id]?p.bg:"#f5f5f5",border:`1.5px solid ${todayPromise[p.id]?p.bd:"#ddd"}`,fontSize:12}}>
+                    background:(todayPromise[p.id]===true||todayPromise[p.id]===1)?p.bg:"#f5f5f5",
+                    border:`1.5px solid ${(todayPromise[p.id]===true||todayPromise[p.id]===1)?p.bd:"#ddd"}`,fontSize:12}}>
                     <span>{p.ic}</span>
-                    <span style={{fontWeight:600,color:todayPromise[p.id]?"#333":"#aaa"}}>{p.title}</span>
-                    {todayPromise[p.id]&&<span>⭐</span>}
+                    <span style={{fontWeight:600,color:(todayPromise[p.id]===true||todayPromise[p.id]===1)?"#333":"#aaa"}}>{p.title}</span>
+                    {(todayPromise[p.id]===true||todayPromise[p.id]===1)&&<span>⭐</span>}
                   </div>
                 ))}
               </div>
-              {/* 달력 */}
               <div style={{borderTop:"1.5px solid #c8ecd8",paddingTop:10}}>
                 <div style={{fontSize:12,fontWeight:700,color:"#2a7a50",marginBottom:6}}>📅 {today.slice(0,7)} 건강 약속 기록</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,textAlign:"center"}}>
@@ -399,8 +501,7 @@ export default function App(){
                   {cdList.map((d,i)=>{
                     if(!d)return<div key={"e"+i}/>;
                     const ds=`${today.slice(0,7)}-${String(d).padStart(2,"0")}`;
-                    const mark=getMark(ds);
-                    const isT=ds===today;
+                    const mark=getMark(ds);const isT=ds===today;
                     return(
                       <div key={d} style={{borderRadius:6,padding:"3px 2px",background:isT?"#e0f8ec":"#f8f8f8",border:isT?"2px solid #2a7a50":"1px solid #eee",minHeight:30,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
                         <div style={{fontSize:9,fontWeight:isT?700:400,color:isT?"#2a7a50":"#555"}}>{d}</div>
@@ -419,8 +520,6 @@ export default function App(){
             </>
           )}
         </div>
-
-        {/* 메뉴 */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
           {[
             {icon:"🏅",label:"오늘 운동 입력",color:P,bg:LP,action:()=>setPage("check")},
@@ -434,7 +533,6 @@ export default function App(){
             </button>
           ))}
         </div>
-
         {myGoalList.length>0&&(
           <div style={CARD}>
             <div style={{fontSize:13,fontWeight:700,color:P,marginBottom:10}}>🎯 나의 목표 현황</div>
@@ -458,7 +556,6 @@ export default function App(){
     );
   }
 
-  // MY GOAL
   if(page==="mygoal"&&user?.role==="student") return(
     <div style={{minHeight:520,background:"linear-gradient(135deg,#fff9f0,#f0f0ff)",padding:"20px 24px"}}>
       <TopBar title="🎯 나의 목표"/>
@@ -480,8 +577,7 @@ export default function App(){
             {editGoals[k]&&tot>0&&(
               <div style={{marginTop:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#aaa",marginBottom:4}}>
-                  <span>{tot}{ex.unit} 달성</span>
-                  <span>목표 {editGoals[k]}{ex.unit}</span>
+                  <span>{tot}{ex.unit} 달성</span><span>목표 {editGoals[k]}{ex.unit}</span>
                 </div>
                 <div style={{height:8,background:"#f0e8ff",borderRadius:4,overflow:"hidden"}}>
                   <div style={{height:"100%",width:`${Math.min(100,(tot/Number(editGoals[k]))*100).toFixed(1)}%`,background:P,borderRadius:4}}/>
@@ -496,7 +592,6 @@ export default function App(){
     </div>
   );
 
-  // MY CALENDAR
   if(page==="mycalendar"&&user?.role==="student"){
     const{first,last}=calDays(calMonth);
     const days=[];for(let i=0;i<first;i++)days.push(null);for(let d=1;d<=last;d++)days.push(d);
@@ -539,7 +634,6 @@ export default function App(){
     );
   }
 
-  // CHECK
   if(page==="check"&&user?.role==="student") return(
     <div style={{minHeight:520,background:"linear-gradient(135deg,#fff9f0,#f0f0ff)",padding:"20px 16px"}}>
       <TopBar title="🏅 오늘 운동 체크"/>
@@ -574,7 +668,6 @@ export default function App(){
     </div>
   );
 
-  // EMOTION
   if(page==="emotion"&&user?.role==="student") return(
     <div style={{minHeight:520,background:"linear-gradient(135deg,#fff9f0,#f0f0ff)",padding:"20px 16px"}}>
       <TopBar title="감정 기록 😊"/>
@@ -598,7 +691,6 @@ export default function App(){
     </div>
   );
 
-  // DONE
   if(page==="done"&&user?.role==="student"){
     const rec=data.records[gk(user.id,today)]||{checks,quantities,emotionBefore,emotionAfter};
     const cC=rec.checks||checks,cQ=rec.quantities||quantities,cEB=rec.emotionBefore||emotionBefore,cEA=rec.emotionAfter||emotionAfter;
@@ -644,7 +736,6 @@ export default function App(){
     );
   }
 
-  // ADMIN
   if(page==="admin"){
     const roleName=user.role==="master"?"마스터":`${user.classNum}반 담임`;
     const tabs=user.role==="master"
@@ -804,8 +895,7 @@ export default function App(){
               </select>
               <textarea value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder="전하고 싶은 말을 써주세요 ✏️" rows={3}
                 style={{width:"100%",padding:"9px 12px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:13,resize:"none",boxSizing:"border-box",fontFamily:"inherit",marginBottom:8}}/>
-              <button onClick={()=>{if(!msgTarget||!msgText.trim())return;setData(d=>({...d,messages:{...d.messages,[msgTarget]:{text:msgText.trim(),from:user.name,date:today}}}));setMsgText("");setMsgTarget("");}}
-                style={{width:"100%",padding:10,borderRadius:11,background:P,color:"#fff",fontWeight:700,border:"none",cursor:"pointer"}}>보내기 💌</button>
+              <button onClick={sendMessage} style={{width:"100%",padding:10,borderRadius:11,background:P,color:"#fff",fontWeight:700,border:"none",cursor:"pointer"}}>보내기 💌</button>
               {myStudents.filter(s=>data.messages[s.id]).map(s=>(
                 <div key={s.id} style={{marginTop:8,background:"#fdf8ff",borderRadius:10,padding:"7px 10px",fontSize:11}}>
                   <span style={{fontWeight:700,color:P}}>{s.name}</span>
@@ -826,8 +916,7 @@ export default function App(){
               </div>
               <div style={{display:"flex",gap:7}}>
                 <input type="number" min="1" value={goalVal} onChange={e=>setGoalVal(e.target.value)} placeholder="목표 수량" style={{flex:1,padding:"7px 10px",borderRadius:10,border:"1.5px solid #e0d8f8",fontSize:13}}/>
-                <button onClick={()=>{if(!goalTarget||!goalEx||!goalVal)return;const ex=data.exercises.find(e=>e.id===goalEx);setData(d=>({...d,goals:{...d.goals,[goalKey(goalTarget,goalEx)]:{target:Number(goalVal),unit:ex.unit,exName:ex.name}}}));setGoalVal("");setGoalPopup(true);setTimeout(()=>setGoalPopup(false),2000);}}
-                  style={{padding:"7px 14px",borderRadius:10,background:OR,color:"#fff",border:"none",cursor:"pointer",fontWeight:700}}>설정</button>
+                <button onClick={setGoalFn} style={{padding:"7px 14px",borderRadius:10,background:OR,color:"#fff",border:"none",cursor:"pointer",fontWeight:700}}>설정</button>
               </div>
             </div>
           </div>
@@ -844,12 +933,12 @@ export default function App(){
                     <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
                       {data[key].map(n=><div key={n} style={{display:"flex",alignItems:"center",gap:5,background:LP,borderRadius:16,padding:"4px 12px",fontSize:12}}>
                         <span style={{fontWeight:700}}>{n}{suffix}</span>
-                        <button onClick={()=>setData(d=>({...d,[key]:d[key].filter(x=>x!==n)}))} style={{background:"none",border:"none",cursor:"pointer",color:"#e05555",fontSize:12,padding:0}}>X</button>
+                        <button onClick={()=>updateMeta(key,data[key].filter(x=>x!==n))} style={{background:"none",border:"none",cursor:"pointer",color:"#e05555",fontSize:12,padding:0}}>X</button>
                       </div>)}
                     </div>
                     <div style={{display:"flex",gap:6}}>
                       <input type="number" min="1" value={val} onChange={e=>setVal(e.target.value)} placeholder={label} style={{flex:1,padding:"6px 8px",borderRadius:8,border:"1.5px solid #e0d8f8",fontSize:13}}/>
-                      <button onClick={()=>{const n=parseInt(val);if(!n||data[key].includes(n))return;setData(d=>({...d,[key]:[...d[key],n].sort((a,b)=>a-b)}));setVal("");}}
+                      <button onClick={()=>{const n=parseInt(val);if(!n||data[key].includes(n))return;updateMeta(key,[...data[key],n].sort((a,b)=>a-b));setVal("");}}
                         style={{padding:"6px 12px",borderRadius:8,background:P,color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>추가</button>
                     </div>
                   </div>
@@ -862,7 +951,7 @@ export default function App(){
                 <div key={ex.id} style={{display:"flex",alignItems:"center",gap:7,background:"#f8f4ff",borderRadius:10,padding:"7px 10px",marginBottom:5,fontSize:12}}>
                   <span>{ex.icon}</span><span style={{flex:1,fontWeight:600}}>{ex.name}</span>
                   <span style={{fontSize:10,color:"#aaa",background:"#fff",borderRadius:5,padding:"1px 6px"}}>{ex.type==="check"?"체크":`수량(${ex.unit})`}</span>
-                  <button onClick={()=>setData(d=>({...d,exercises:d.exercises.filter(e=>e.id!==ex.id)}))} style={{background:"none",border:"none",cursor:"pointer",color:"#e05555",fontSize:13,padding:0}}>X</button>
+                  <button onClick={()=>removeExercise(ex.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#e05555",fontSize:13,padding:0}}>X</button>
                 </div>
               ))}
               <div style={{display:"grid",gridTemplateColumns:"44px 1fr",gap:5,marginBottom:5}}>
@@ -874,8 +963,7 @@ export default function App(){
                   <option value="check">체크</option><option value="quantity">수량 입력</option>
                 </select>
                 {newExType==="quantity"?<input value={newExUnit} onChange={e=>setNewExUnit(e.target.value)} placeholder="단위(회,분…)" style={{padding:"6px 8px",borderRadius:8,border:"1.5px solid #e0d8f8",fontSize:12}}/>:<div/>}
-                <button onClick={()=>{if(!newExName.trim())return;setData(d=>({...d,exercises:[...d.exercises,{id:`e${Date.now()}`,name:newExName.trim(),icon:newExIcon,type:newExType,unit:newExUnit}]}));setNewExName("");setNewExIcon("⭐");setNewExUnit("");}}
-                  style={{padding:"6px",borderRadius:8,background:P,color:"#fff",border:"none",cursor:"pointer",fontWeight:700}}>추가</button>
+                <button onClick={addExercise} style={{padding:"6px",borderRadius:8,background:P,color:"#fff",border:"none",cursor:"pointer",fontWeight:700}}>추가</button>
               </div>
             </div>
             <div style={CARD}>
@@ -883,7 +971,7 @@ export default function App(){
               <div style={{background:"#f8f4ff",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
                 <div style={{fontSize:12,fontWeight:700,color:P,marginBottom:4}}>CSV 파일로 일괄 등록</div>
                 <div style={{fontSize:11,color:"#aaa",marginBottom:4}}>열 순서: 학년 · 반 · 번호 · 이름 · 성별</div>
-                <div style={{fontSize:11,color:OR,marginBottom:8}}>엑셀에서 CSV로 저장 후 업로드하세요</div>
+                <div style={{fontSize:11,color:OR,marginBottom:8}}>엑셀에서 CSV로 저장 후 업로드</div>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <label style={{flex:1,padding:"8px 12px",borderRadius:8,border:"1.5px dashed #c0b0f0",fontSize:12,cursor:"pointer",background:"#fff",
                     textAlign:"center",color:xlsxFileName?"#6c3fd6":"#aaa",fontWeight:xlsxFileName?700:400,display:"block",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
@@ -902,7 +990,7 @@ export default function App(){
                     <span style={{color:"#aaa",fontSize:11,minWidth:18,textAlign:"right"}}>{s.number||"-"}</span>
                     <span style={{flex:1,fontWeight:600}}>{s.name}</span>
                     <span style={{fontSize:10,color:"#aaa"}}>{s.grade}학년 {s.classNum}반 ({s.gender})</span>
-                    <button onClick={()=>setData(d=>({...d,users:d.users.filter(u=>u.id!==s.id)}))} style={{background:"none",border:"none",cursor:"pointer",color:"#e05555",fontSize:12,padding:0}}>X</button>
+                    <button onClick={()=>removeStudent(s.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#e05555",fontSize:12,padding:0}}>X</button>
                   </div>
                 ))}
               </div>
@@ -921,8 +1009,7 @@ export default function App(){
                   <option value="남">남</option><option value="여">여</option>
                 </select>
               </div>
-              <button onClick={()=>{if(!newStudent.name.trim())return;setData(d=>({...d,users:[...d.users,{...newStudent,id:`u${Date.now()}`,grade:parseInt(newStudent.grade),classNum:parseInt(newStudent.classNum),role:"student"}]}));setNewStudent({name:"",grade:"1",classNum:"1",number:"",gender:"남",pw:"1234"});}}
-                style={{width:"100%",padding:9,borderRadius:10,background:P,color:"#fff",fontWeight:700,border:"none",cursor:"pointer",fontSize:13}}>+ 학생 추가</button>
+              <button onClick={addStudent} style={{width:"100%",padding:9,borderRadius:10,background:P,color:"#fff",fontWeight:700,border:"none",cursor:"pointer",fontSize:13}}>+ 학생 추가</button>
             </div>
           </div>
         )}

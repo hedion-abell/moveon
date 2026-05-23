@@ -1,17 +1,6 @@
-# MOVE-ON 건강 생활 앱
-# 배포 확인용 수정
-초등 1~2학년 학생의 건강 생활 실천, 운동 기록, 목표 관리, 교사용 확인 기능을 담은 React 앱입니다.
+# MOVE-ON
 
-## 포함 기능
-
-- 학생 로그인 / 교사 로그인 / 관리자 로그인
-- 오늘의 건강 약속 체크
-- 운동 기록 입력
-- 운동 전후 감정 기록
-- 나의 목표 설정
-- 월별 기록 달력
-- 교사용 현황표, 명렬표, 순위 확인
-- 관리자용 학생 CSV 일괄 등록
+초등학생 건강 생활 기록 및 교사용 관리 기능을 포함한 React + Firebase 기반 웹앱입니다.
 
 ## 실행 방법
 
@@ -20,29 +9,22 @@ npm install
 npm run dev
 ```
 
-## Vercel 배포
+## Vercel 배포 설정
 
-1. 이 폴더 전체를 GitHub 저장소에 업로드합니다.
-2. Vercel에서 해당 GitHub 저장소를 Import합니다.
-3. Framework Preset은 `Vite`로 선택합니다.
-4. Build Command는 `npm run build`, Output Directory는 `dist`를 사용합니다.
+- Framework Preset: Vite
+- Build Command: `npm run build`
+- Output Directory: `dist`
 
-## 테스트 계정
+## 기본 로그인 예시
 
 - 학생: 김민준 / 1234
 - 교사: 김선생 / teacher1
 - 관리자: 관리자 / master
 
-## CSV 학생 일괄 등록 형식
+## 포함 파일
 
-엑셀에서 아래 열 순서로 작성한 뒤, CSV 형식으로 저장해 업로드합니다.
-
-```csv
-학년,반,번호,이름,성별
-1,1,1,김민준,남
-1,1,2,이서연,여
-```
-
-## 참고
-
-현재 버전은 브라우저 상태값 기반 앱입니다. 새로고침하거나 다른 기기에서 접속하면 저장 데이터가 유지되지 않을 수 있습니다. 실제 학교 운영용으로 사용하려면 Firebase, Supabase 등 데이터베이스 연동이 필요합니다.
+- `src/App.jsx`: 메인 앱 코드
+- `src/main.jsx`: React 시작 파일
+- `index.html`: Vite 진입 HTML
+- `package.json`: 실행 및 빌드 설정
+- `.gitignore`: GitHub 업로드 제외 파일
