@@ -9,7 +9,7 @@
     "vite": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "firebase": "latest"
+    "lucide-react": "latest"
   },
   "devDependencies": {}
 }
